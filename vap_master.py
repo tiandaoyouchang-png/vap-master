@@ -436,6 +436,7 @@ class Args:
     bitrate: int
     swap_bitrate: int
     keep_work: bool
+    standard_scale: float
 
 
 def parse_args() -> Args:
@@ -459,6 +460,12 @@ def parse_args() -> Args:
         help="mask-left swap re-encode bitrate (kbps)",
     )
     _ = parser.add_argument("--keep-work", action="store_true", help="Keep temporary working directory")
+    _ = parser.add_argument(
+        "--standard-scale",
+        type=float,
+        default=0.5,
+        help="Alpha scaling factor for standard mode (default: 0.5)",
+    )
 
     ns = parser.parse_args()
     return Args(
@@ -471,6 +478,7 @@ def parse_args() -> Args:
         bitrate=int(cast(int, ns.bitrate)),
         swap_bitrate=int(cast(int, ns.swap_bitrate)),
         keep_work=bool(cast(bool, ns.keep_work)),
+        standard_scale=float(cast(float, ns.standard_scale)),
     )
 
 
@@ -534,7 +542,7 @@ def main() -> None:
             vap_out_dir=vap_out_dir,
             fps=args.fps,
             bitrate=args.bitrate,
-            scale=(0.5 if args.mode == "standard" else 1.0),
+            scale=(args.standard_scale if args.mode == "standard" else 1.0),
         )
 
         orig_mp4 = vap_out_dir / "video.mp4"

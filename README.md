@@ -44,7 +44,7 @@ To use `vap-master`, ensure your environment meets the following requirements:
 ### 📖 Usage / 使用方法
 
 #### Standard Mode
-Generates a VAP MP4 with the default layout: RGB on the left, Alpha on the right (scaled to 0.5x).
+Generates a VAP MP4 with the default layout: RGB on the left, Alpha on the right (scaled to 0.5x by default, configurable via `--standard-scale`).
 
 ```bash
 python3 vap_master.py \
@@ -73,6 +73,7 @@ python3 vap_master.py \
 | `--output` | **Required**. Path where the final MP4 will be saved. | N/A |
 | `--fps` | Frames per second for the output video. | `25` |
 | `--mode` | Layout mode: `standard` or `mask-left`. | `standard` |
+| `--standard-scale` | Alpha scaling factor for `standard` mode. | `0.5` |
 | `--bitrate` | VapTool encoding bitrate in kbps. | `2000` |
 | `--swap-bitrate` | Re-encoding bitrate for `mask-left` mode in kbps. | `3000` |
 | `--java` | Path to the `java` binary. | *System Default* |
@@ -85,7 +86,7 @@ python3 vap_master.py \
 
 - **Standard Mode**:
   - **Left**: RGB (Original size)
-  - **Right**: Alpha (Scaled 0.5x)
+  - **Right**: Alpha (Scaled by `--standard-scale`, default 0.5x)
 - **Mask-Left Mode**:
   - **Left**: Alpha/Mask (FrameWidth x FrameHeight)
   - **Right**: RGB (FrameWidth x FrameHeight)
@@ -149,7 +150,7 @@ When running in `mask-left` mode, the tool performs the following steps:
 ### 📖 Usage / 使用方法
 
 #### 标准模式 (Standard Mode)
-生成具有默认布局的 VAP MP4：左侧为 RGB，右侧为 Alpha（缩放至 0.5 倍）。
+生成具有默认布局的 VAP MP4：左侧为 RGB，右侧为 Alpha（默认缩放至 0.5 倍，可通过 `--standard-scale` 配置）。
 
 ```bash
 python3 vap_master.py \
@@ -178,6 +179,7 @@ python3 vap_master.py \
 | `--output` | **必填**。最终 MP4 的保存路径。 | N/A |
 | `--fps` | 输出视频的帧率。 | `25` |
 | `--mode` | 布局模式：`standard` 或 `mask-left`。 | `standard` |
+| `--standard-scale` | `standard` 模式下的 Alpha 缩放系数。 | `0.5` |
 | `--bitrate` | VapTool 编码比特率 (kbps)。 | `2000` |
 | `--swap-bitrate` | `mask-left` 模式下的重编码比特率 (kbps)。 | `3000` |
 | `--java` | `java` 二进制文件的路径。 | *系统默认* |
@@ -190,7 +192,7 @@ python3 vap_master.py \
 
 - **标准模式 (Standard Mode)**：
   - **左侧**：RGB（原始尺寸）
-  - **右侧**：Alpha（缩放至 0.5 倍）
+  - **右侧**：Alpha（按 `--standard-scale` 缩放，默认 0.5 倍）
 - **左侧蒙版模式 (Mask-Left Mode)**：
   - **左侧**：Alpha/蒙版 (帧宽 x 帧高)
   - **右侧**：RGB (帧宽 x 帧高)

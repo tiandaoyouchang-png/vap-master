@@ -13,7 +13,8 @@
 
 - **Unified Interface**: Simplifies the VAP generation process into a single command.
 - **Multiple Layout Modes**: Supports both the `standard` VAP layout and a specialized `mask-left` layout.
-- **Automatic Normalization**: Automatically crops frames from 1344px height to 1334px height to meet specific platform requirements.
+- **Automatic Normalization**: Automatically detects frame dimensions and crops frames from `target_h + 10` height to `target_h` height (e.g., 1344px to 1334px) to meet specific platform requirements.
+- **Dynamic Resolution**: Automatically adapts the output video resolution based on the input PNG frames (Width = FrameWidth * 2, Height = FrameHeight).
 - **Advanced Post-Processing**: Handles complex region swapping and `vapc` atom manipulation for custom layouts.
 - **Headless Execution**: Wraps the VapTool Java API for seamless integration into automated pipelines.
 
@@ -54,7 +55,7 @@ python3 vap_master.py \
 ```
 
 #### Mask-Left Mode
-Generates a VAP MP4 with a custom layout: Alpha/Mask on the left (1008x1334), RGB on the right (1008x1334). Total resolution: 2016x1334.
+Generates a VAP MP4 with a custom layout: Alpha/Mask on the left, RGB on the right. The output resolution is automatically calculated (Total Width = FrameWidth * 2, Height = FrameHeight).
 
 ```bash
 python3 vap_master.py \
@@ -86,12 +87,12 @@ python3 vap_master.py \
   - **Left**: RGB (Original size)
   - **Right**: Alpha (Scaled 0.5x)
 - **Mask-Left Mode**:
-  - **Left**: Alpha/Mask (1008x1334)
-  - **Right**: RGB (1008x1334)
-  - **Total Resolution**: 2016x1334
+  - **Left**: Alpha/Mask (FrameWidth x FrameHeight)
+  - **Right**: RGB (FrameWidth x FrameHeight)
+  - **Total Resolution**: (FrameWidth * 2) x FrameHeight
 
 #### Frame Normalization
-The tool expects input PNGs to have a width of 1008px. If the height is 1344px, it will automatically crop the frame to 1334px from the top (0,0) to ensure compatibility with specific VAP requirements.
+The tool automatically detects dimensions from the first frame. If the raw height (`raw_h`) is exactly `target_h + 10` (e.g., 1344px vs 1334px), it will automatically crop the frame from the top (0,0) to `target_h` to ensure compatibility with specific VAP requirements.
 
 #### Mask-Left Workflow
 When running in `mask-left` mode, the tool performs the following steps:
@@ -102,7 +103,7 @@ When running in `mask-left` mode, the tool performs the following steps:
 ### ❓ Troubleshooting / 故障排除
 
 - **Missing Dependencies**: Ensure `ffmpeg`, `ffprobe`, and `java` are correctly installed and accessible.
-- **Invalid Frame Sizes**: Input PNGs must be 1008px wide and either 1334px or 1344px high.
+- **Invalid Frame Sizes**: Ensure all input PNGs have consistent dimensions. The tool supports dynamic resolution but requires uniform input frames.
 - **VapTool Errors**: Check the VapTool home directory path and ensure `animtool.jar` is present.
 - **Playback Issues**: If the video doesn't play correctly in `mask-left` mode, verify that the target player supports custom `vapc` configurations.
 
@@ -117,7 +118,8 @@ When running in `mask-left` mode, the tool performs the following steps:
 
 - **统一接口**：将 VAP 生成过程简化为单个命令。
 - **多种布局模式**：支持“标准”（standard）VAP 布局和专门的“左侧蒙版”（mask-left）布局。
-- **自动规格化**：自动将帧高度从 1344px 裁剪至 1334px，以满足特定平台的规格要求。
+- **自动规格化**：自动检测帧尺寸，并将帧高度从 `target_h + 10` 裁剪至 `target_h`（例如从 1344px 裁剪至 1334px），以满足特定平台的规格要求。
+- **动态分辨率适配**：根据输入 PNG 帧自动调整输出视频分辨率（宽度 = 帧宽 * 2，高度 = 帧高）。
 - **高级后处理**：处理复杂的区域交换和 `vapc` atom 操作，以实现自定义布局。
 - **无头执行**：封装了 VapTool Java API，可无缝集成到自动化流水线中。
 
@@ -158,7 +160,7 @@ python3 vap_master.py \
 ```
 
 #### 左侧蒙版模式 (Mask-Left Mode)
-生成具有自定义布局的 VAP MP4：左侧为 Alpha/蒙版（1008x1334），右侧为 RGB（1008x1334）。总分辨率：2016x1334。
+生成具有自定义布局的 VAP MP4：左侧为 Alpha/蒙版，右侧为 RGB。输出分辨率将自动计算（总宽度 = 帧宽 * 2，高度 = 帧高）。
 
 ```bash
 python3 vap_master.py \
@@ -190,12 +192,12 @@ python3 vap_master.py \
   - **左侧**：RGB（原始尺寸）
   - **右侧**：Alpha（缩放至 0.5 倍）
 - **左侧蒙版模式 (Mask-Left Mode)**：
-  - **左侧**：Alpha/蒙版 (1008x1334)
-  - **右侧**：RGB (1008x1334)
-  - **总分辨率**：2016x1334
+  - **左侧**：Alpha/蒙版 (帧宽 x 帧高)
+  - **右侧**：RGB (帧宽 x 帧高)
+  - **总分辨率**：(帧宽 * 2) x 帧高
 
 #### 帧规格化 (Frame Normalization)
-该工具要求输入 PNG 的宽度为 1008px。如果高度为 1344px，它将自动 from 顶部 (0,0) 开始将帧裁剪至 1334px，以确保与特定 VAP 要求的兼容性。
+该工具会自动从第一帧检测尺寸。如果原始高度 (`raw_h`) 正好是 `target_h + 10`（例如 1344px 与 1334px），它将自动从顶部 (0,0) 开始将帧裁剪至 `target_h`，以确保与特定 VAP 要求的兼容性。
 
 #### 左侧蒙版工作流 (Mask-Left Workflow)
 在 `mask-left` 模式下运行时，该工具执行以下步骤：
@@ -206,7 +208,7 @@ python3 vap_master.py \
 ### ❓ Troubleshooting / 故障排除
 
 - **缺少依赖**：确保已正确安装并可访问 `ffmpeg`、`ffprobe` 和 `java`。
-- **无效的帧尺寸**：输入 PNG 必须为 1008px 宽，且高度为 1334px 或 1344px。
+- **无效的帧尺寸**：确保所有输入 PNG 的尺寸一致。该工具支持动态分辨率，但要求输入帧规格统一。
 - **VapTool 错误**：检查 VapTool 根目录路径并确保 `animtool.jar` 存在。
 - **播放问题**：如果视频在 `mask-left` 模式下无法正常播放，请验证目标播放器是否支持自定义 `vapc` 配置。
 

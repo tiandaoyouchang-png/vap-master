@@ -70,20 +70,27 @@ def read_png_size(file_path: Path) -> tuple[int, int]:
     return width, height
 
 
-def normalize_frames(src_folder: Path, png_files: list[str], normalized_dir: Path, ffmpeg: str) -> None:
+def normalize_frames(
+    src_folder: Path,
+    png_files: list[str],
+    normalized_dir: Path,
+    ffmpeg: str,
+    target_w: int,
+    target_h: int,
+) -> None:
     normalized_dir.mkdir(parents=True, exist_ok=True)
     for idx, frame_name in enumerate(png_files):
         src = src_folder / frame_name
         dst = normalized_dir / f"{idx:03d}.png"
         width, height = read_png_size(src)
-        if width != 1008:
-            raise RuntimeError(f"Frame width must be 1008, got {width} for {src}")
-        if height == 1334:
+        if width != target_w:
+            raise RuntimeError(f"Frame width must be {target_w}, got {width} for {src}")
+        if height == target_h:
             try:
                 os.symlink(src, dst)
             except OSError:
                 _ = shutil.copy2(src, dst)
-        elif height == 1344:
+        elif height == target_h + 10:
             _ = run_cmd(
                 [
                     ffmpeg,
@@ -91,7 +98,7 @@ def normalize_frames(src_folder: Path, png_files: list[str], normalized_dir: Pat
                     "-i",
                     str(src),
                     "-vf",
-                    "crop=1008:1334:0:0",
+                    f"crop={target_w}:{target_h}:0:0",
                     "-frames:v",
                     "1",
                     str(dst),
@@ -99,7 +106,7 @@ def normalize_frames(src_folder: Path, png_files: list[str], normalized_dir: Pat
                 f"crop frame {src.name}",
             )
         else:
-            raise RuntimeError(f"Frame height must be 1334 or 1344, got {height} for {src}")
+            raise RuntimeError(f"Frame height must be {target_h} or {target_h + 10}, got {height} for {src}")
 
 
 def list_top_level_atoms(mp4_path: Path) -> list[str]:
@@ -239,6 +246,8 @@ def swap_video_regions(
     swapped_mp4: Path,
     ffmpeg: str,
     out_bitrate_k: int,
+    frame_w: int,
+    frame_h: int,
 ) -> None:
     frame_count = int(vapc.frame_count)
     fps = float(vapc.fps)
@@ -249,10 +258,10 @@ def swap_video_regions(
     ax, ay, aw, ah = vapc.a_frame
     rx, ry, rw, rh = vapc.rgb_frame
 
-    out_w = 2016
-    out_h = 1334
+    out_w = frame_w * 2
+    out_h = frame_h
     alpha_dst_x, alpha_dst_y = 0, 0
-    rgb_dst_x, rgb_dst_y = 1008, 0
+    rgb_dst_x, rgb_dst_y = frame_w, 0
 
     filter_str = (
         f"color=s={out_w}x{out_h}:c=black:d={dur:.6f}[base];"
@@ -295,15 +304,17 @@ def write_final_with_vapc(
     ffprobe: str,
     work_dir: Path,
     final_output: Path,
+    frame_w: int,
+    frame_h: int,
 ) -> None:
     updated_json: dict[str, object] = dict(vapc.vapc_json)
     info_obj = updated_json.get("info")
     updated_info: dict[str, object] = dict(_require_dict(info_obj, "vapc.json.info"))
 
-    updated_info["videoW"] = 2016
-    updated_info["videoH"] = 1334
-    updated_info["aFrame"] = [0, 0, 1008, 1334]
-    updated_info["rgbFrame"] = [1008, 0, 1008, 1334]
+    updated_info["videoW"] = frame_w * 2
+    updated_info["videoH"] = frame_h
+    updated_info["aFrame"] = [0, 0, frame_w, frame_h]
+    updated_info["rgbFrame"] = [frame_w, 0, frame_w, frame_h]
     updated_json["info"] = updated_info
 
     vapc_atom_path = work_dir / "vapc.atom"
@@ -496,6 +507,13 @@ def main() -> None:
     if not png_files:
         die(f"No valid PNG frames found in {src_dir} (need files like *_00001.png)")
 
+    first_frame_path = src_dir / png_files[0]
+    raw_w, raw_h = read_png_size(first_frame_path)
+    # Automatically adapt resolution based on input frames.
+    # Special case: 1344 height is cropped to 1334 to meet platform requirements.
+    frame_w = raw_w
+    frame_h = 1334 if raw_h == 1344 else raw_h
+
     tmp_root = Path(tempfile.mkdtemp(prefix="vap_master_"))
     work_dir = tmp_root
     success = False
@@ -504,7 +522,7 @@ def main() -> None:
         vap_out_dir = work_dir / "vap_out"
         swapped_mp4 = work_dir / "swapped.mp4"
 
-        normalize_frames(src_dir, png_files, frames_dir, ffmpeg)
+        normalize_frames(src_dir, png_files, frames_dir, ffmpeg, frame_w, frame_h)
 
         compile_vapbatch_if_needed(skill_dir, javac, animtool_jar)
         run_vap_batch(
@@ -535,10 +553,10 @@ def main() -> None:
         if not vapc_path.exists():
             raise RuntimeError(f"VapTool output missing vapc.json: {vapc_path}")
         vapc = parse_vapc_json(vapc_path)
-        swap_video_regions(orig_mp4, vapc, swapped_mp4, ffmpeg, args.swap_bitrate)
+        swap_video_regions(orig_mp4, vapc, swapped_mp4, ffmpeg, args.swap_bitrate, frame_w, frame_h)
         if not is_playable_mp4(swapped_mp4, ffprobe):
             raise RuntimeError(f"Swapped MP4 is not playable: {swapped_mp4}")
-        write_final_with_vapc(swapped_mp4, vapc, mp4edit, ffprobe, work_dir, out_mp4)
+        write_final_with_vapc(swapped_mp4, vapc, mp4edit, ffprobe, work_dir, out_mp4, frame_w, frame_h)
         if not has_top_level_vapc(out_mp4):
             raise RuntimeError(f"Final output missing vapc atom: {out_mp4}")
         success = True
